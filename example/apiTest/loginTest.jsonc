@@ -1,0 +1,28 @@
+{
+    "url":"http://127.0.0.1:8000/api/user/login",
+    "method":"POST",
+    "request":{
+        "body":{
+            "username":"dev",
+            // Asking a user input during test
+            // You can access this value as a variable
+            "password":"{{ > password }}"
+        },
+        "headers":{
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+    },
+    "response": {
+        "body":{
+            // Creating a new variable and checking the type
+            "token":"{{ token: string }}",
+            // Checking the type without creating a new variable
+            "mileage": "{{ number }}",
+            "limit": "{{ limit:number }}",
+            // Save the value to a variable called anotherLimit and 
+            // compare it with previously created variable
+            "anotherLimit": "{{ anotherLimit:number && anotherLimit >= limit }}"
+        }
+    }
+}
