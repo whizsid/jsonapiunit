@@ -1,0 +1,82 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'example'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=example",
+                    "--package=example"
+                ],
+                "filter": {
+                    "name": "example",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'example'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=example",
+                    "--package=example"
+                ],
+                "filter": {
+                    "name": "example",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'json-api-tester'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=json-api-tester",
+                    "--package=json-api-tester"
+                ],
+                "filter": {
+                    "name": "json-api-tester",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'json-api-tester'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=json-api-tester",
+                    "--package=json-api-tester"
+                ],
+                "filter": {
+                    "name": "json-api-tester",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

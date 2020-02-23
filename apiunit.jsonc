@@ -1,0 +1,15 @@
+{
+    "baseUrl":"http://127.0.0.1:8000/api/",
+    "preVariables": {
+        "username": "dev",
+        "password": "dev"
+    },
+    "default": {
+        "method":"POST",
+        "headers": {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+    },
+    "files":"apiTest/*.{json,jsonc}"
+}
