@@ -11,5 +11,5 @@
             "Accept": "application/json"
         }
     },
-    "files":"apiTest/*.{json,jsonc}"
+    "files":"example/apiTest/*.jsonc"
 }

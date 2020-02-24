@@ -1,26 +1,21 @@
 extern crate http;
 extern crate serde_hjson;
+extern crate glob;
 
 mod variables;
 mod config;
+mod interpreter;
 
-use variables::Variables;
 use config::Config;
+use glob::glob;
+use std::fs::read_to_string;
+use interpreter::Interpreter;
 
 fn main() {
     let config = Config::from_file();
+    let mut interpreter = Interpreter::new(config.default);
 
-    match config.default.headers {
-        Some(headers)=>{
 
-            for (k,v) in headers {
-                println!("{}:{}",k.unwrap(),v.to_str().unwrap());
 
-            }
-        }
-
-        None=>{}
-    };
-
-    println!("Hello, world!");
+    println!("Test: {}, Test2:{}",interpreter.request_value("{{ > print : integer }}"),interpreter.request_value("{{print}}"));
 }

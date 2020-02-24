@@ -25,11 +25,11 @@ A framework for unit testing your JSON REST APIs.
             // Creating a new variable named token and checking the type
             "token":"{{ token: string }}",
             // Checking the type without creating a new variable
-            "mileage": "{{ number }}",
-            "limit": "{{ limit:number }}",
+            "mileage": "{{ integer }}",
+            "limit": "{{ limit:integer }}",
             // Save the value to a variable named anotherLimit and 
             // compare it with previously created variable
-            "anotherLimit": "{{ anotherLimit:number && anotherLimit >= limit }}"
+            "anotherLimit": "{{ anotherLimit:integer && anotherLimit >= limit }}"
         }
     }
 }
@@ -38,7 +38,7 @@ A framework for unit testing your JSON REST APIs.
 
 ## Type Checking
 
-You can check the exact type of your data by using typescript types.
+You can check the exact type of your data. Available types are `string`,`integer`,`float`,`null`,`any`,`array`,`object`.
 
 Example:-
 
@@ -47,7 +47,7 @@ Example:-
     "body":{
 
         "name" : "{{string}}",
-        "limit" : "{{number}}",
+        "limit" : "{{integer}}",
         "nick_name" : "{{string|null}}"
     }
 }
@@ -62,7 +62,7 @@ Create variables with the data coming from the REST API.
 {
     "body":{
         "name": "{{name:string}}",
-        "limit": "{{ limit: number }}",
+        "limit": "{{ limit: integer }}",
         "nick_name": "{{ nickName: string|null }}"
     }
 }
@@ -79,9 +79,9 @@ Compare data with previously created variables or other values.
 {
     "body":{
         // mileageLimit is a previously created variable
-        "mileage":"mileage:number && mileage <= mileageLimit",
-        "billCount": "billCount:number && billCount > 0",
-        "name": "name: string && name == 'Abrahm'"
+        "mileage":"{{mileage:integer && mileage <= mileageLimit}}",
+        "billCount": "{{billCount:integer && billCount > 0}}",
+        "name": "{{name: string && name == 'Abrahm'}}"
     }
 }
 
@@ -96,7 +96,7 @@ Requesting user inputs before sending the data to the API
 {
     "params":{
         "username" : "dev",
-        "password" : "{{ > password}}"
+        "password" : "{{ > password:string}}"
     }
 }
 

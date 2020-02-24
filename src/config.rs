@@ -21,6 +21,9 @@ pub struct Config {
 }
 
 impl Config {
+    /// # Creating new empty configuration
+    /// 
+    /// All fields are empty except files.
     pub fn new()->Config {
         Config {
             base_url: None,
@@ -29,10 +32,14 @@ impl Config {
                 method: None,
                 headers: None
             },
-            files: String::from("apiTest/*.{jsonc,json}")
+            files: String::from("apiTest/*.jsonc")
         }
     }
 
+    /// # Loading configurations from file
+    /// 
+    /// This function will read the `apiunit.jsonc` file and
+    /// creating the new config struct
     pub fn from_file() -> Config {
         let file = read_to_string("apiunit.jsonc");
 
@@ -94,7 +101,18 @@ impl Config {
                                 let mut headers_map = HeaderMap::new();
 
                                 for (key,val) in headers_obj {
-                                    headers_map.append(HeaderName::from_bytes(String::from(key).into_bytes().as_ref()).unwrap(), HeaderValue::from_bytes( &val.to_string().into_bytes()).unwrap());
+                                    headers_map.append(
+                                        HeaderName::from_bytes(
+                                            String::from(key)
+                                                .into_bytes()
+                                                .as_ref()
+                                        ).unwrap(), 
+                                        HeaderValue::from_bytes( 
+                                            &val
+                                                .to_string()
+                                                .into_bytes()
+                                        ).unwrap()
+                                    );
                                 }
 
                                 Some(headers_map)
