@@ -4,7 +4,7 @@ A framework for unit testing your JSON REST APIs.
 
 ## Example
 
-```json
+```jsonc
 {
     "url":"http://127.0.0.1:8000/api/user/login",
     "method":"POST",
@@ -29,7 +29,7 @@ A framework for unit testing your JSON REST APIs.
             "limit": "{{ limit:integer }}",
             // Save the value to a variable named anotherLimit and 
             // compare it with previously created variable
-            "anotherLimit": "{{ anotherLimit:integer && anotherLimit >= limit }}"
+            "anotherLimit": "{{ anotherLimit:integer && (anotherLimit >= limit) }}"
         }
     }
 }
@@ -42,7 +42,7 @@ You can check the exact type of your data. Available types are `string`,`integer
 
 Example:-
 
-```json
+```jsonc
 {
     "body":{
 
@@ -58,7 +58,7 @@ Example:-
 
 Create variables with the data coming from the REST API.
 
-``` json
+```jsonc
 {
     "body":{
         "name": "{{name:string}}",
@@ -75,7 +75,7 @@ You can use these variables to validate next test cases.
 
 Compare data with previously created variables or other values.
 
-```json
+```jsonc
 {
     "body":{
         // mileageLimit is a previously created variable
@@ -91,7 +91,7 @@ Compare data with previously created variables or other values.
 
 Requesting user inputs before sending the data to the API
 
-```json 
+```jsonc 
 
 {
     "params":{
