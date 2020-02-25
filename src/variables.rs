@@ -6,7 +6,8 @@ pub enum VariableType {
     Null,
     Any,
     Arr,
-    Obj
+    Obj,
+    Bool
 }
 
 impl VariableType {
@@ -33,10 +34,26 @@ impl VariableType {
             b"object"=>{
                 VariableType::Obj
             }
+            b"boolean"=>{
+                VariableType::Bool
+            }
             _=>{
                 panic!("Invalid variable type supplied.");
             }
         }
+    }
+
+    pub fn get_default_value(var_type:&VariableType)->String {
+        String::from(match var_type {
+            VariableType::Any=>{"\"\""}
+            VariableType::Arr=>{"[]"}
+            VariableType::Bool=>{"false"}
+            VariableType::Float=>{"0.00"}
+            VariableType::Int=>{"0"}
+            VariableType::Null=>{"null"}
+            VariableType::Obj=>{"{}"}
+            VariableType::Str=>{"\"\""}
+        })
     }
 }
 

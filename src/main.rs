@@ -10,12 +10,14 @@ use config::Config;
 use glob::glob;
 use std::fs::read_to_string;
 use interpreter::Interpreter;
+use serde_hjson::Value;
 
 fn main() {
     let config = Config::from_file();
     let mut interpreter = Interpreter::new(config.default);
 
-
-
-    println!("Test: {}, Test2:{}",interpreter.request_value("{{ > print : integer }}"),interpreter.request_value("{{print}}"));
+    println!("Test: {}",interpreter.response_value(
+        serde_hjson::from_str("\"{{ print : integer &&1==2}}\"").unwrap(),
+        serde_hjson::from_str("\"aas\"").unwrap()
+    ));
 }
