@@ -65,15 +65,13 @@ pub struct Variable {
 }
 
 pub struct Variables {
-    variables: Vec<Variable>,
-    current: u32
+    pub variables: Vec<Variable>
 }
 
 impl Variables {
     pub fn new()->Variables {
         Variables {
-            variables: vec!(),
-            current:0
+            variables: vec!()
         }
     }
 
@@ -93,16 +91,14 @@ impl Variables {
     pub fn len(&self)->usize{
         self.variables.len()
     }
-}
 
-impl Iterator for Variables {
-    type Item = Variable;
-    
-    fn next(&mut self) -> Option<Variable> {
-        self.current = self.current +1;
+    pub fn get_js_definitions(&self)->String{
+        let mut declare = String::from("");
 
-        let variable = self.variables.get(self.current as usize).unwrap();
+        for var in self.variables.iter() {
+            declare.push_str(&format!("var {} = {};\n",&var.name,var.value));
+        }
 
-        Some(variable.clone())
+        declare
     }
 }

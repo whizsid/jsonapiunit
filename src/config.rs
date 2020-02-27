@@ -1,5 +1,6 @@
 use super::variables::Variables;
 use super::variables::VariableType;
+use super::interpreter::parse_value;
 
 use http::HeaderMap;
 use http::header::HeaderName;
@@ -68,7 +69,7 @@ impl Config {
 
                         
                         for (k,v) in pre_variables.as_object().unwrap() {
-                            variables.add(k,&v.to_string(),VariableType::Any);
+                            variables.add(k,&parse_value(&v),VariableType::Any);
                         }
 
                         Some(variables)

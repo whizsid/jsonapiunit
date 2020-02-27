@@ -1,25 +1,36 @@
 use super::variables::Variables;
 use super::variables::VariableType;
-use super::config::DefaultConfig;
 use std::io::stdin;
 use serde_hjson::Value;
+use serde_hjson::Map;
+use boa::exec;
+use std::collections::HashMap;
+use std::str::FromStr;
 
 pub struct Interpreter {
-    variables: Variables,
-    default_config: DefaultConfig
+    variables: Variables
 }
 
 impl Interpreter {
-    pub fn new(default_config: DefaultConfig)->Interpreter {
-        let variables = Variables::new();
+    pub fn new(pre_variables_opt: Option< Variables>)->Interpreter {
+        let mut variables = Variables::new();
+
+        match pre_variables_opt {
+            Some(pre_variables)=>{
+
+                for var in pre_variables.variables {
+                    variables.add(&var.name,&var.value,var.variable_type);
+                }
+            }
+            None=>{}
+        }
 
         Interpreter {
-            variables,
-            default_config
+            variables
         }
     }
 
-    pub fn request_value(&mut self,format:Value)->String{
+    pub fn request_value(&mut self,format:&Value)->String{
         let mut format = parse_value(&format);
 
         if format.len()<=6 {return format};
@@ -29,7 +40,7 @@ impl Interpreter {
                 match format.get(format.len()-3..format.len()).unwrap() {
                     "}}\""=>{
                         format.retain(|c| !c.is_whitespace());
-
+                        
                         match format.get(3..4).unwrap() {
                             ">"=>{
                                 let colon_offset = format.find(":").unwrap();
@@ -48,6 +59,7 @@ impl Interpreter {
                                     .ok()
                                     .expect(&format!("Couldn't read the value for {}:{}",variable_name,variable_type));
 
+
                                 if let VariableType::Str = variable_type_enum {
                                     let mut new_variable_value = String::from("\"");
                                     new_variable_value.push_str(&variable_value);
@@ -57,7 +69,7 @@ impl Interpreter {
 
                                 self.variables.add(variable_name,&variable_value,variable_type_enum);
 
-                                variable_value.clone()
+                                variable_value
                             }
                             _=>{
                                 match self.variables.get(&format.get(3..(format.len()-3)).unwrap()) {
@@ -101,10 +113,22 @@ impl Interpreter {
                                     Some(first_and_position)=>{
                                         let comparison = format.get((first_and_position+2)..(format.len()-3)).unwrap();
                                         let variable_name = format.get(3..colon_position).unwrap();
-                                        let variable_type = format.get((colon_position+1)..first_and_position).unwrap();
-                                        let variable_type = VariableType::from_bytes(variable_type.as_bytes());
+                                        let variable_types = parse_types(format.get((colon_position+1)..first_and_position).unwrap());
 
-                                        let type_matched = check_type(&variable_type, &response_value_org);
+                                        let mut type_matched = false;
+                                        let mut variable_type = VariableType::Null;
+
+                                        for var_type in variable_types {
+                                            match var_type {
+                                                VariableType::Null=>{}
+                                                _=>{
+                                                    if check_type(&var_type, &response_value_org) {
+                                                        type_matched = true;
+                                                    }
+                                                    variable_type = var_type;
+                                                }
+                                            }
+                                        }
 
                                         if !type_matched {
                                             self.variables.add(&variable_name,&VariableType::get_default_value(&variable_type),variable_type);
@@ -113,7 +137,14 @@ impl Interpreter {
                                             self.variables.add(&variable_name,&response_value,variable_type);
                                         }
 
-                                        type_matched
+                                        let mut js_definitions = self.variables.get_js_definitions();
+                                        js_definitions.push_str("if(");
+                                        js_definitions.push_str(comparison);
+                                        js_definitions.push_str(") {return true;} else {return false;}");
+
+                                        let output = exec(&js_definitions);
+
+                                        if output =="true" {true} else {false}
                                     }
                                     None=>{
                                         let variable_name = format.get(3..colon_position).unwrap();
@@ -124,6 +155,7 @@ impl Interpreter {
 
                                         if !type_matched {
                                             self.variables.add(&variable_name,&VariableType::get_default_value(&variable_type),variable_type);
+                                            println!("WARN : Type not matching for the variable '{}'. Assigned the default value.",variable_name);
                                         } else {
                                             self.variables.add(&variable_name,&response_value,variable_type);
                                         }
@@ -157,6 +189,33 @@ impl Interpreter {
                 format == response_value
             }
         }
+    }
+
+    pub fn parse_request_body(&mut self, body:Map<String,Value>)->Map<String,Value>{
+        fn parse_body(this:&mut Interpreter, body:Map<String,Value>)->Map<String,Value>{
+            let mut map:Map<String,Value> = Map::new();
+            for (k,v) in body {
+                let new_val = match v {
+                    Value::Object(obj)=>{
+                        Value::Object(parse_body(this, obj))
+                    }
+                    Value::Array(arr)=>{
+                        Value::Array(arr.iter().map(|val|{ Value::from_str(&this.request_value(val)).unwrap()}).collect::<Vec<_>>())
+                    }
+                    _=>{
+                        let value = this.request_value(&v);
+                        
+                        Value::from_str(&value).unwrap()
+                    }
+                };
+
+                map.insert(k, new_val);
+            }
+
+            map
+        }
+
+        parse_body(self, body)
     }
 }
 

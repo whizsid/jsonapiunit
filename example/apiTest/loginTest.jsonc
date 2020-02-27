@@ -1,12 +1,12 @@
 {
-    "url":"http://127.0.0.1:8000/api/user/login",
+    "url":"user/login",
     "method":"POST",
     "request":{
         "body":{
-            "username":"dev",
+            "username":"{{username}}",
             // Asking a user input during test
             // You can access this value as a variable
-            "password":"{{ > password }}"
+            "password":"{{ > password: string }}"
         },
         "headers":{
             "Accept": "application/json",
@@ -23,6 +23,10 @@
             // Save the value to a variable called anotherLimit and 
             // compare it with previously created variable
             "anotherLimit": "{{ anotherLimit:number && anotherLimit >= limit }}"
+        },
+        "status": 200,
+        "headers": {
+            "Accept": "application/json"
         }
     }
 }
