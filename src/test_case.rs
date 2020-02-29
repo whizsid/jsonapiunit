@@ -1,4 +1,4 @@
-use serde_hjson::{Map,Value};
+use serde_json::{Map,Value};
 use http::Method;
 use http::HeaderMap;
 use http::header::HeaderName;
@@ -92,8 +92,9 @@ impl Request {
                         ).unwrap(), 
                         HeaderValue::from_bytes( 
                             &val
-                                .to_string()
-                                .into_bytes()
+                                .as_str()
+                                .unwrap()
+                                .as_bytes()
                         ).unwrap()
                     );
                 }
@@ -144,8 +145,9 @@ impl Response {
                         ).unwrap(), 
                         HeaderValue::from_bytes( 
                             &val
-                                .to_string()
-                                .into_bytes()
+                                .as_str()
+                                .unwrap()
+                                .as_bytes()
                         ).unwrap()
                     );
                 }

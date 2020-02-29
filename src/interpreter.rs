@@ -1,11 +1,10 @@
 use super::variables::Variables;
-use super::variables::VariableType;
 use std::io::stdin;
-use serde_hjson::Value;
-use serde_hjson::Map;
+use serde_json::Value;
+use serde_json::Map;
 use boa::exec;
-use std::collections::HashMap;
 use std::str::FromStr;
+use serde_json::from_str;
 
 pub struct Interpreter {
     variables: Variables
@@ -19,7 +18,7 @@ impl Interpreter {
             Some(pre_variables)=>{
 
                 for var in pre_variables.variables {
-                    variables.add(&var.name,&var.value,var.variable_type);
+                    variables.add(&var.name,var.value);
                 }
             }
             None=>{}
@@ -31,7 +30,7 @@ impl Interpreter {
     }
 
     pub fn request_value(&mut self,format:&Value)->String{
-        let mut format = parse_value(&format);
+        let mut format = format!("{}",format);
 
         if format.len()<=6 {return format};
 
@@ -49,32 +48,41 @@ impl Interpreter {
 
                                 let variable_type = format.get((colon_offset+1)..(format.len()-3)).unwrap();
 
-                                let variable_type_enum = VariableType::from_bytes(variable_type.as_bytes());
-
-                                println!("> {}:{} ?",variable_name,variable_type);
-
                                 let mut variable_value = String::new();
+
+                                println!("Value for {}:",variable_name);
 
                                 stdin().read_line(&mut variable_value)
                                     .ok()
                                     .expect(&format!("Couldn't read the value for {}:{}",variable_name,variable_type));
 
-
-                                if let VariableType::Str = variable_type_enum {
+                                variable_value = String::from(variable_value.trim());
+                                
+                                if variable_type == "string" {
                                     let mut new_variable_value = String::from("\"");
                                     new_variable_value.push_str(&variable_value);
-                                    new_variable_value.push('"');
+                                    new_variable_value.push_str("\"");
                                     variable_value = new_variable_value;
                                 }
 
-                                self.variables.add(variable_name,&variable_value,variable_type_enum);
+                                let mut entered_value = from_str(&variable_value.clone()).expect("Invalid value entered!");
+
+                                let check_type = type_check(variable_type, &entered_value);
+
+                                if !check_type {
+                                    variable_value= get_default_value(variable_type).expect(&format!("Unsupported type given for {}.",variable_name));
+                                    println!("WARN : Type not matching for the variable '{}'. Assigned the default value.",variable_name);
+                                    entered_value = from_str(&variable_value).unwrap();
+                                }
+
+                                self.variables.add(variable_name,entered_value);
 
                                 variable_value
                             }
                             _=>{
                                 match self.variables.get(&format.get(3..(format.len()-3)).unwrap()) {
                                     Some(variable)=>{
-                                        variable.value.clone()
+                                        format!("{}",variable.value)
                                     }
                                     None=>{
                                         panic!("Can not find a variable named {}",format)
@@ -95,9 +103,49 @@ impl Interpreter {
             
     }
 
+    fn add_response_variable(&mut self,variable_name:&str,types:&str,value:Value)->bool{
+
+        let types = types.split("|");
+        let mut type_matched = false;
+        let mut conflict_types = false;
+        let mut default_value = String::from("null");
+
+        for var_type in types {
+            match var_type {
+                "null"=>{}
+                _=>{
+                    if conflict_types {
+                        panic!("Conflicting types supplied for the variable {}",variable_name);
+                    }
+
+                    conflict_types = true;
+
+                    default_value = match get_default_value(var_type) {
+                        Ok(string)=>{string}
+                        Err(_)=>{
+                            panic!("Unsupported type given for {}",variable_name)
+                        }
+                    };
+
+                    type_matched =  type_check(var_type,&value);
+                    
+                }
+            }
+        }
+
+        if !type_matched {
+            self.variables.add(&variable_name,from_str(&default_value).unwrap());
+            println!("WARN : Type not matching for the variable '{}'. Assigned the default value.",variable_name);
+        } else {
+            self.variables.add(&variable_name,value);
+        }
+
+        type_matched
+    }
+
     pub fn response_value(&mut self,format: Value, response_value_org: Value)->bool{
-        let mut format = parse_value(&format);
-        let response_value = parse_value(&response_value_org);
+        let mut format = format!("{}",format);
+        let response_value = format!("{}",response_value_org);
 
         if format.len()<=6 {return format==response_value};
 
@@ -112,29 +160,14 @@ impl Interpreter {
                                 match format.find("&&") {
                                     Some(first_and_position)=>{
                                         let comparison = format.get((first_and_position+2)..(format.len()-3)).unwrap();
+                                        let types = format.get((colon_position+1)..first_and_position).unwrap();
+
                                         let variable_name = format.get(3..colon_position).unwrap();
-                                        let variable_types = parse_types(format.get((colon_position+1)..first_and_position).unwrap());
 
-                                        let mut type_matched = false;
-                                        let mut variable_type = VariableType::Null;
+                                        let type_checked = self.add_response_variable(variable_name, types, response_value_org);
 
-                                        for var_type in variable_types {
-                                            match var_type {
-                                                VariableType::Null=>{}
-                                                _=>{
-                                                    if check_type(&var_type, &response_value_org) {
-                                                        type_matched = true;
-                                                    }
-                                                    variable_type = var_type;
-                                                }
-                                            }
-                                        }
-
-                                        if !type_matched {
-                                            self.variables.add(&variable_name,&VariableType::get_default_value(&variable_type),variable_type);
-                                            println!("WARN : Type not matching for the variable '{}'. Assigned the default value.",variable_name);
-                                        } else {
-                                            self.variables.add(&variable_name,&response_value,variable_type);
+                                        if !type_checked {
+                                            return type_checked;
                                         }
 
                                         let mut js_definitions = self.variables.get_js_definitions();
@@ -148,32 +181,25 @@ impl Interpreter {
                                     }
                                     None=>{
                                         let variable_name = format.get(3..colon_position).unwrap();
-                                        let variable_type = format.get((colon_position+1)..format.len()-3).unwrap();
-                                        let variable_type = VariableType::from_bytes(variable_type.as_bytes());
+                                        let types = format.get((colon_position+1)..format.len()-3).unwrap();
 
-                                        let type_matched = check_type(&variable_type, &response_value_org);
+                                        let type_checked = self.add_response_variable(variable_name, types, response_value_org);
 
-                                        if !type_matched {
-                                            self.variables.add(&variable_name,&VariableType::get_default_value(&variable_type),variable_type);
-                                            println!("WARN : Type not matching for the variable '{}'. Assigned the default value.",variable_name);
-                                        } else {
-                                            self.variables.add(&variable_name,&response_value,variable_type);
-                                        }
-
-
-                                        type_matched
+                                        type_checked
                                     }
                                 }
                             },
                             None => {
-                                let types = parse_types(format.get(3..(format.len()-3)).unwrap());
+                                let types = format.get(3..(format.len()-3)).unwrap().split("|");
                                 let mut type_matched = false;
 
                                 for var_type in types {
-                                    let type_checked = check_type(&var_type, &response_value_org);
-                                    if type_checked {
-                                        type_matched = true;
-                                    };
+                                    
+                                   let type_checked = type_check(var_type, &response_value_org);
+
+                                   if type_checked {
+                                       type_matched = true;
+                                   }
                                 };
 
                                 type_matched
@@ -200,12 +226,12 @@ impl Interpreter {
                         Value::Object(parse_body(this, obj))
                     }
                     Value::Array(arr)=>{
-                        Value::Array(arr.iter().map(|val|{ Value::from_str(&this.request_value(val)).unwrap()}).collect::<Vec<_>>())
+                        Value::Array(arr.iter().map(|val|{ from_str(&this.request_value(val)).unwrap()}).collect::<Vec<_>>())
                     }
                     _=>{
                         let value = this.request_value(&v);
                         
-                        Value::from_str(&value).unwrap()
+                        from_str(&value).unwrap()
                     }
                 };
 
@@ -219,96 +245,51 @@ impl Interpreter {
     }
 }
 
-pub fn parse_types(types:&str)->Vec<VariableType>{
-    let types = String::from(types);
-
-    types.split("|").map(|splited|{VariableType::from_bytes(splited.as_bytes())}).collect()
-}
-
-pub fn parse_value(value:&Value)->String {
+pub fn type_check(var_type:&str,value:&Value)->bool {
     match value {
-        Value::String(val_str)=>{
-
-            let mut prefixed = String::from("\"");
-
-            prefixed.push_str(&val_str);
-
-            prefixed.push('"');
-
-            prefixed
-        }
-        Value::Null =>{
-            String::from("null")
-        }
-        Value::Bool(val_bool)=>{
-            String::from(if val_bool.clone() {"true"} else {"false"})
-        }
-        Value::Object(_)=>{
-            String::from("{}")
+        Value::Number(_)=>{
+            var_type == "number"
         }
         Value::Array(_)=>{
-            String::from("[]")
+            var_type == "array"
         }
-        Value::F64(float)=>{
-            float.to_string()
+        Value::Bool(_)=>{
+            var_type == "boolean"
         }
-        Value::I64(int)=>{
-            int.to_string()
+        Value::Null=>{
+            var_type == "null"
         }
-        Value::U64(unsigned)=>{
-            unsigned.to_string()
+        Value::String(_)=>{
+            var_type == "string"
+        }
+        Value::Object(_)=>{
+            var_type == "object"
         }
     }
 }
 
-pub fn check_type(var_type:&VariableType,value:&Value)->bool {
-    let mut type_matched = false;
-
-    if let VariableType::Int = var_type {
-        if let Value::I64(_) = value {
-            type_matched = true;
-        };
-    };
-
-    if let VariableType::Str = var_type {
-        if let Value::String(_) = value {
-            type_matched = true;
+pub fn get_default_value(var_type:&str)->Result<String,&str>{
+    match var_type {
+        "boolean"=>{
+            Ok(String::from("false"))
+        }
+        "number"=>{
+            Ok(String::from("0"))
+        }
+        "string"=>{
+            Ok(String::from("\"\""))
+        }
+        "object"=>{
+            Ok(String::from("{}"))
+        }
+        "array"=>{
+            Ok(String::from("[]"))
+        }
+        "null"=>{
+            Ok(String::from("null"))
+        }
+        _=>{
+            Err("Unssupported Type.")
         }
     }
-
-    if let VariableType::Float = var_type {
-        if let Value::F64(_) = value {
-            type_matched = true;
-        }
-    }
-
-    if let VariableType::Null = var_type {
-        if let Value::Null = value {
-            type_matched = true;
-        }
-    }
-
-    if let VariableType::Arr = var_type {
-        if let Value::Array(_) = value {
-            type_matched = true;
-        }
-    }
-
-    if let VariableType::Obj = var_type {
-        if let Value::Object(_) = value {
-            type_matched = true;
-        }
-    }
-
-    if let VariableType::Bool = var_type {
-        if let Value::Bool(_) = value {
-            type_matched = true;
-        }
-    }
-
-    if let VariableType::Any = var_type {
-        type_matched = true;
-    }
-
-    type_matched
 }

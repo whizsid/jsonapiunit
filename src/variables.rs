@@ -1,67 +1,9 @@
-#[derive(Clone)]
-pub enum VariableType {
-    Str,
-    Int,
-    Float,
-    Null,
-    Any,
-    Arr,
-    Obj,
-    Bool
-}
-
-impl VariableType {
-    pub fn from_bytes(bytes: &[u8])->VariableType {
-        match bytes {
-            b"integer"=>{
-                VariableType::Int
-            }
-            b"string"=>{
-                VariableType::Str
-            }
-            b"float"=>{
-                VariableType::Float
-            }
-            b"null"=>{
-                VariableType::Null
-            }
-            b"any"=>{
-                VariableType::Any
-            }
-            b"array"=>{
-                VariableType::Arr
-            }
-            b"object"=>{
-                VariableType::Obj
-            }
-            b"boolean"=>{
-                VariableType::Bool
-            }
-            _=>{
-                panic!("Invalid variable type supplied.");
-            }
-        }
-    }
-
-    pub fn get_default_value(var_type:&VariableType)->String {
-        String::from(match var_type {
-            VariableType::Any=>{"\"\""}
-            VariableType::Arr=>{"[]"}
-            VariableType::Bool=>{"false"}
-            VariableType::Float=>{"0.00"}
-            VariableType::Int=>{"0"}
-            VariableType::Null=>{"null"}
-            VariableType::Obj=>{"{}"}
-            VariableType::Str=>{"\"\""}
-        })
-    }
-}
+use serde_json::Value;
 
 #[derive(Clone)]
 pub struct Variable {
     pub name: String,
-    pub variable_type: VariableType,
-    pub value: String
+    pub value: Value
 }
 
 pub struct Variables {
@@ -76,11 +18,10 @@ impl Variables {
     }
 
     /// Adding a variable to the collection
-    pub fn add(&mut self,name:&str,value:&str,variable_type:VariableType){
+    pub fn add(&mut self,name:&str,value:Value){
         self.variables.push(Variable {
             name: String::from(name),
-            value: String::from(value),
-            variable_type
+            value: value
         });
     }
 

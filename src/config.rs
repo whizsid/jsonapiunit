@@ -1,13 +1,13 @@
 use super::variables::Variables;
-use super::variables::VariableType;
-use super::interpreter::parse_value;
 
 use http::HeaderMap;
 use http::header::HeaderName;
 use http::header::HeaderValue;
 use http::Method;
 use std::fs::read_to_string;
-use serde_hjson::{Value,Map};
+use serde_json::{Value,Map};
+use serde_json::from_reader;
+use json_comments::StripComments;
 
 pub struct DefaultConfig {
     pub method: Option<Method>,
@@ -46,19 +46,22 @@ impl Config {
 
         match file {
             Ok(file_str)=>{
-                let config_json: Map<String, Value> = serde_hjson::from_str(&file_str).unwrap();
+                let file_without_comment = StripComments::new(file_str.as_bytes());
+                let config_val:Value = from_reader(file_without_comment).unwrap();
+                let config_json: &Map<String, Value> = config_val.as_object().unwrap();
+
                 let mut config = Config::new();
 
                 config.base_url = match config_json.get("baseUrl") {
                     Some(base_url)=>{
-                         Some(base_url.to_string())
+                         Some(String::from(base_url.as_str().unwrap()))
                     }
                     None=>{None}
                 };
 
                 match config_json.get("files") {
                     Some(file_pattern)=>{
-                        config.files = file_pattern.to_string();
+                        config.files = String::from(file_pattern.as_str().unwrap());
                     }
                     None=>{}
                 };
@@ -69,7 +72,7 @@ impl Config {
 
                         
                         for (k,v) in pre_variables.as_object().unwrap() {
-                            variables.add(k,&parse_value(&v),VariableType::Any);
+                            variables.add(k,v.to_owned());
                         }
 
                         Some(variables)
@@ -88,7 +91,7 @@ impl Config {
 
                         default_config.method = match default_obj.get("method") {
                             Some(method)=>{
-                                let method_str = method.to_string().to_uppercase();
+                                let method_str = method.as_str().unwrap().to_uppercase();
 
                                 Some(Method::from_bytes(& method_str.into_bytes()).unwrap())
                             }
@@ -110,8 +113,9 @@ impl Config {
                                         ).unwrap(), 
                                         HeaderValue::from_bytes( 
                                             &val
-                                                .to_string()
-                                                .into_bytes()
+                                                .as_str()
+                                                .unwrap()
+                                                .as_bytes()
                                         ).unwrap()
                                     );
                                 }
