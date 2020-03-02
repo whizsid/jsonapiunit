@@ -7,33 +7,40 @@ pub struct Variable {
 }
 
 pub struct Variables {
-    pub variables: Vec<Variable>
+    pub variables: Vec<Variable>,
+    pub js_used_variable_count: usize
 }
 
 impl Variables {
     pub fn new()->Variables {
         Variables {
-            variables: vec!()
+            variables: vec!(),
+            js_used_variable_count:0
         }
     }
 
     /// Adding a variable to the collection
     pub fn add(&mut self,name:&str,value:Value){
-        self.variables.push(Variable {
-            name: String::from(name),
-            value: value
-        });
+        let exist = self.get(name);
+
+        match exist {
+            Some(_)=>{
+                panic!("Re assignment for the {} variable.",name)
+            }
+            None=>{
+                self.variables.push(Variable {
+                    name: String::from(name),
+                    value: value
+                });
+            }
+        }
     }
 
     pub fn get(&self, name: &str)-> Option<&Variable>{
         self.variables.iter().find(|&r| r.name == name)
     }
 
-    pub fn len(&self)->usize{
-        self.variables.len()
-    }
-
-    pub fn get_js_definitions(&self)->String{
+    pub fn get_js_definitions(&mut self)->String{
         let mut declare = String::from("");
 
         for var in self.variables.iter() {

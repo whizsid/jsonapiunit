@@ -52,6 +52,10 @@ impl TestCase {
             }
         }
     }
+
+    pub fn name(&self)->String{
+        self.name.clone()
+    }
 }
 
 pub struct Request {
@@ -126,35 +130,6 @@ impl Response {
             None=>{
                 None
             }
-        }
-    }
-
-    pub fn headers(&self)->Option<HeaderMap> {
-         match self.json.get("headers") {
-            Some(headers) =>{
-                let headers_obj = headers.as_object().unwrap();
-
-                let mut headers_map = HeaderMap::new();
-
-                for (key,val) in headers_obj {
-                    headers_map.append(
-                        HeaderName::from_bytes(
-                            String::from(key)
-                                .into_bytes()
-                                .as_ref()
-                        ).unwrap(), 
-                        HeaderValue::from_bytes( 
-                            &val
-                                .as_str()
-                                .unwrap()
-                                .as_bytes()
-                        ).unwrap()
-                    );
-                }
-
-                Some(headers_map)
-            }
-            None =>{None}
         }
     }
 

@@ -4,7 +4,7 @@
     "request": {
         "headers":{
             // Passing a priviously created variable
-            "Authorization": "Bearer {{token}}",
+            "Authorization": "Bearer {{token}}abcd",
             "Accept": "application/json",
             "Content-Type": "application/json"
         },

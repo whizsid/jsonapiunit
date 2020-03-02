@@ -1,5 +1,5 @@
 {
-    "url":"user/login",
+    "url":"/index.php",
     "method":"POST",
     "request":{
         "body":{
