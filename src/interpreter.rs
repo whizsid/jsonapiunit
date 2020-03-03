@@ -1,4 +1,5 @@
 use super::variables::Variables;
+#[cfg(not(test))]
 use std::io::stdin;
 use serde_json::Value;
 use serde_json::Map;
@@ -38,6 +39,24 @@ impl Interpreter {
         }
     }
 
+    #[cfg(not(test))]
+    fn request_user_input(&self,variable_name:&str)->String{
+        let mut variable_value = String::new();
+
+        println!("{} : {}?","INPUT".blue(),variable_name);
+
+        stdin().read_line(&mut variable_value)
+            .ok()
+            .expect(&format!("Couldn't read the value for {}",variable_name));
+
+        variable_value
+    }
+
+    #[cfg(test)]
+    fn request_user_input(&self,_variable_name:&str)->String{
+        String::from("USER_INPUT")
+    }
+
     pub fn request_value(&mut self,format:&Value)->String{
         let mut format = format!("{}",format);
 
@@ -57,13 +76,7 @@ impl Interpreter {
 
                                 let variable_type = format.get((colon_offset+1)..(format.len()-3)).unwrap();
 
-                                let mut variable_value = String::new();
-
-                                println!("{} : {}?","INPUT".blue(),variable_name);
-
-                                stdin().read_line(&mut variable_value)
-                                    .ok()
-                                    .expect(&format!("Couldn't read the value for {}:{}",variable_name,variable_type));
+                                let mut variable_value = self.request_user_input(variable_name);
 
                                 variable_value = String::from(variable_value.trim());
                                 
@@ -117,16 +130,21 @@ impl Interpreter {
         let mut string = String::new();
 
         let mut found = 0;
+        let mut last_end = 0;
         for mat in Regex::new(r"\{\{(.*?)\}\}").unwrap().find_iter(format) {
             let json_val = Value::String(String::from(mat.as_str()));
             let value:Value = from_str(&self.request_value(&json_val)).unwrap();
 
-            string.push_str(format.get(0..mat.start()).unwrap());
+            string.push_str(format.get(last_end..mat.start()).unwrap());
+
             string.push_str(value.as_str().unwrap());
 
-            string.push_str(format.get(mat.end()..format.len()).unwrap());
+            last_end = mat.end();
+
             found+=1;
         }
+
+        string.push_str(format.get(last_end..format.len()).unwrap());
         
         if found == 0 {
             String::from(format)
@@ -369,6 +387,11 @@ impl Interpreter {
         parse_body(self,test_body ,res_body)
 
     }
+
+    #[cfg(test)]
+    pub fn variables(&self)->&Variables{
+        &self.variables
+    }
 }
 
 pub fn type_check(var_type:&str,value:&Value)->bool {
@@ -420,5 +443,191 @@ pub fn get_default_value(var_type:&str)->Result<String,&str>{
         _=>{
             Err("Unssupported Type.")
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::Interpreter;
+    use serde_json::from_str;
+    use serde_json::Value;
+    use crate::variables::Variables;
+    use serde_json::Number;
+
+    fn make_interpreter_with_pre_variable()->Interpreter{
+        let mut variables = Variables::new();
+
+        let json_val_foo:Value = from_str("\"Foo\"").unwrap() ;
+        let json_val_bar:Value = from_str("12").unwrap() ;
+
+        variables.add("foo",json_val_foo);
+        variables.add("bar",json_val_bar);
+
+        Interpreter::new(Some(variables))
+    }
+
+    #[test]
+    pub fn test_request_value_without_pattern(){
+        let mut interpreter = Interpreter::new(None);
+
+        let json_val:Value = from_str("\"Foo\"").unwrap() ;
+
+        let req_value = interpreter.request_value(&json_val);
+
+        assert_eq!(&req_value,"\"Foo\"")
+    }
+
+    #[test]
+    pub fn test_request_value_with_variable(){
+        
+        let mut interpreter = make_interpreter_with_pre_variable();
+
+        let var_name_val:Value = from_str("\"{{foo}}\"").unwrap() ;
+
+        let foo_val = interpreter.request_value(&var_name_val);
+
+        assert_eq!("\"Foo\"",&foo_val)
+    }
+
+    #[test]
+    pub fn test_request_value_with_user_input(){
+        let mut interpreter = Interpreter::new(None);
+
+        let json_val:Value = from_str("\"{{>user_input:string}}\"").unwrap();
+
+        let user_input = interpreter.request_value(&json_val);
+
+        assert_eq!("\"USER_INPUT\"",&user_input)
+    }
+
+    #[test]
+    pub fn test_request_header_without_pattern(){
+        let mut interpreter = Interpreter::new(None);
+
+        let header_value = interpreter.request_header("application/json");
+
+        assert_eq!(&header_value,"application/json")
+    }
+
+    #[test]
+    pub fn test_request_header_with_pattern(){
+        let mut interpreter = make_interpreter_with_pre_variable();
+
+        // At begining
+        let header_value = interpreter.request_header("{{foo}} is Foo");
+        assert_eq!(&header_value,"Foo is Foo");
+
+        // At the middle
+        let header_value = interpreter.request_header("Bar {{foo}} Bar");
+        assert_eq!(&header_value,"Bar Foo Bar");
+
+        // At the end
+        let header_value = interpreter.request_header("Foo is {{foo}}");
+        assert_eq!(&header_value,"Foo is Foo");
+
+        // Whole sentences
+        let header_value = interpreter.request_header("{{foo}}");
+        assert_eq!(&header_value,"Foo");
+
+        // Two patterns
+        let header_value = interpreter.request_header("{{foo}} is {{foo}}");
+        assert_eq!(&header_value,"Foo is Foo");
+
+    }
+
+    fn response_value(interpreter: &mut Interpreter,test:&str,res:&str)->bool {
+        let test_value:Value = from_str(test).unwrap();
+        let res_value:Value = from_str(res).unwrap();
+        interpreter.response_value(test_value, res_value)
+    }
+
+    #[test]
+    pub fn test_response_value_with_normal_values(){
+        let mut interpreter = Interpreter::new(None);
+
+        assert_eq!(response_value(&mut interpreter, "1232443323", "1232443323"),true);
+
+        assert_ne!(response_value(&mut interpreter, "1232443323", "123243323"),true);
+
+        assert_eq!(response_value(&mut interpreter, "\"ASB\"", "\"ASB\""),true);
+
+        assert_ne!(response_value(&mut interpreter, "\"ASB\"", "\"ASA\""),true);
+
+        assert_ne!(response_value(&mut interpreter, "\"ASB\"", "2123"),true);
+
+    }
+
+    #[test]
+    pub fn test_response_value_with_type_check(){
+        let mut interpreter = Interpreter::new(None);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{string}}\"", "\"Foo\""),true);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{string| null}}\"", "null"),true);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{string| null}}\"", "\"Foo\""),true);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{string| null}}\"", "1232"),false);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{string}}\"", "1232"),false);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{boolean}}\"", "true"),true);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{array}}\"", "[1,2,3]"),true);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{object}}\"", "[1,2,3]"),false);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{object}}\"", "{\"a\":123}"),true);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{any}}\"", "[1,2,3]"),true);
+    }
+
+    #[test]
+    pub fn test_response_value_with_variable_creation(){
+        let mut interpreter = Interpreter::new(None);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{fooStr:string}}\"", "\"Foo\""),true);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{barStr:string|null}}\"", "null"),true);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{fooNmb:number}}\"", "1234"),true);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{fooNmbWrong:string}}\"", "1234"),false);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{fooArr:array}}\"", "[1,2,3]"),true);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{fooArrWrong:object}}\"", "{\"foo\":123}"),true);
+
+        let variables = interpreter.variables();
+
+        let bar_str = variables.get("barStr").unwrap();
+        assert_eq!(bar_str.value,Value::Null);
+
+        let foo_nmb_wrong = variables.get("fooNmbWrong").unwrap();
+        assert_eq!(foo_nmb_wrong.value,Value::String(String::from("")));
+
+        let foo_nmb = variables.get("fooNmb").unwrap();
+        assert_eq!(foo_nmb.value,Value::Number(Number::from(1234)));
+    }
+
+    #[test]
+    pub fn test_response_value_with_comparison(){
+        let mut interpreter = make_interpreter_with_pre_variable();
+
+        assert_eq!(response_value(&mut interpreter, "\"{{barVal:number&& barVal==bar}}\"", "12"),true);
+        assert_eq!(response_value(&mut interpreter, "\"{{barVal1:number&& barVal1<bar}}\"", "11"),true);
+        assert_eq!(response_value(&mut interpreter, "\"{{barVal2:number&& barVal2>bar}}\"", "11"),false);
+        assert_eq!(response_value(&mut interpreter, "\"{{barVal3:number&& barVal3<bar && barVal2< barVal3}}\"", "10"),false);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{fooVal1:string&& fooVal1==foo}}\"", "\"Foo\""),true);
+        assert_eq!(response_value(&mut interpreter, "\"{{fooVal2:string&& (fooVal2!=foo|| fooVal2==fooVal1)}}\"", "\"Foo\""),true);
+        assert_eq!(response_value(&mut interpreter, "\"{{fooVal3:string&& fooVal3!=foo}}\"", "\"Foo\""),false);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{arrVal:array&& arrVal.length==3}}\"", "[1,2,3]"),true);
+        assert_eq!(response_value(&mut interpreter, "\"{{arrVal2:array&& arrVal2.length==arrVal.length}}\"", "[1,2,3,4]"),false);
+
+        assert_eq!(response_value(&mut interpreter, "\"{{objVal1:object&& objVal1.bar==4}}\"", "{\"bar\":4}"),true);
+        assert_eq!(response_value(&mut interpreter, "\"{{objVal2:object&& objVal1.bar==objVal2.foo}}\"", "{\"foo\":5}"),false);
     }
 }
