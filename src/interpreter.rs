@@ -8,6 +8,7 @@ use serde_json::from_str;
 use regex::Regex;
 use colored::*;
 
+/// All codes are executing inside this
 pub struct Interpreter {
     variables: Variables,
     tot_fails: i32,
@@ -57,6 +58,7 @@ impl Interpreter {
         String::from("USER_INPUT")
     }
 
+    /// Passing a pattern in a request body
     pub fn request_value(&mut self,format:&Value)->String{
         let mut format = format!("{}",format);
 
@@ -126,6 +128,7 @@ impl Interpreter {
             
     }
 
+    /// Parsing a pattern in a request header
     pub fn request_header(&mut self, format:&str)->String {
         let mut string = String::new();
 
@@ -202,6 +205,7 @@ impl Interpreter {
         type_matched
     }
 
+    /// Matching a single value in the test case and actual response
     pub fn response_value(&mut self,format: Value, response_value_org: Value)->bool{
         let mut format = format!("{}",format);
         let response_value = format!("{}",response_value_org);
@@ -298,6 +302,7 @@ impl Interpreter {
         passed
     }
 
+    /// Parsing the request body and get the formated body
     pub fn parse_request_body(&mut self, body:Map<String,Value>)->Map<String,Value>{
         fn parse_body(this:&mut Interpreter, body:Map<String,Value>)->Map<String,Value>{
             let mut map:Map<String,Value> = Map::new();
@@ -325,6 +330,8 @@ impl Interpreter {
         parse_body(self, body)
     }
 
+    /// Checking the weather the test case response body 
+    /// and the actual response body are matching
     pub fn parse_response_body(&mut self, test_body: Map<String,Value>, res_body:Map<String,Value>)->bool{
 
         self.cur_asserts = 0;
@@ -348,13 +355,28 @@ impl Interpreter {
                             Value::Array(arr)=>{
                                 if let Value::Array(arr2) = tv {
                                     let mut arr_iter = arr.iter();
-                                    let mut arr2_iter = arr2.iter();
                                     let mut arr_passed = true;
 
                                     while let Some(val) = arr_iter.next() {
+
+                                        let mut arr2_iter = arr2.iter();
+
                                         while let Some(val2) = arr2_iter.next() {
-                                            if ! this.response_value(val2.to_owned(), val.to_owned()){
-                                                arr_passed = false;
+                                            match val2 {
+                                                Value::Object(val2_obj)=>{
+                                                    if let Value::Object(val_obj) = val {
+                                                        if !parse_body(this, val2_obj.to_owned(), val_obj.to_owned()) {
+                                                            arr_passed = false;
+                                                        }
+                                                    } else {
+                                                        arr_passed = false;
+                                                    }
+                                                }
+                                                _=>{
+                                                    if ! this.response_value(val2.to_owned(), val.to_owned()){
+                                                        arr_passed = false;
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -394,6 +416,26 @@ impl Interpreter {
     }
 }
 
+/// # Checking the type of a Value
+/// 
+/// Checking the type of `serde_json:Value` with a string type name
+/// 
+/// ## Supported types 
+/// 
+/// - `number`
+/// - `array`
+/// - `boolean`
+/// - `null`
+/// - `string`
+/// - `object`
+/// - `any`
+/// 
+/// ```
+///  let json_val:Value = serde_json::from_str("123").unwrap();
+/// 
+///  assert_eq!(type_check("number",&json_val),true);
+/// ```
+/// 
 pub fn type_check(var_type:&str,value:&Value)->bool {
     match value {
         Value::Number(_)=>{
@@ -417,6 +459,34 @@ pub fn type_check(var_type:&str,value:&Value)->bool {
     }
 }
 
+/// # Returning the default values for types
+/// 
+/// If user has passed a value with a wrong type these 
+/// values are assigned for the variable.
+/// 
+/// ```
+/// let default_value_bool = get_default_value("boolean").unwrap();
+/// assert_eq!(&default_value_bool,"false");
+/// 
+/// let default_value_nmb = get_default_value("number").unwrap();
+/// assert_eq!(&default_value_nmb,"0");
+/// 
+/// let default_value_str = get_default_value("string").unwrap();
+/// assert_eq!(&default_value_str,"\"\"");
+/// 
+/// let default_value_obj = get_default_value("object").unwrap();
+/// assert_eq!(&default_value_obj,"{}");
+/// 
+/// let default_value_arr = get_default_value("array").unwrap();
+/// assert_eq!(&default_value_arr,"[]");
+/// 
+/// let default_value_nul = get_default_value("null").unwrap();
+/// assert_eq!(&default_value_nul,"null");
+/// 
+/// let default_value_any = get_default_value("any").unwrap();
+/// assert_eq!(&default_value_any,"null");
+/// 
+/// ```
 pub fn get_default_value(var_type:&str)->Result<String,&str>{
     match var_type {
         "boolean"=>{
@@ -452,6 +522,7 @@ mod tests {
     use super::Interpreter;
     use serde_json::from_str;
     use serde_json::Value;
+    use serde_json::Map;
     use crate::variables::Variables;
     use serde_json::Number;
 
@@ -629,5 +700,239 @@ mod tests {
 
         assert_eq!(response_value(&mut interpreter, "\"{{objVal1:object&& objVal1.bar==4}}\"", "{\"bar\":4}"),true);
         assert_eq!(response_value(&mut interpreter, "\"{{objVal2:object&& objVal1.bar==objVal2.foo}}\"", "{\"foo\":5}"),false);
+    }
+
+    fn response_body(body:&str)->Map<String,Value>{
+        let json_val:Value = from_str(body).unwrap();
+
+        json_val.as_object().unwrap().to_owned()
+    }
+
+    #[test]
+    pub fn test_response_body_with_no_parameters(){
+        let mut interpreter = Interpreter::new(None);
+
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{}"#),
+            response_body(r#"{}"#)
+        );
+
+        assert_eq!(passed,true);
+    }
+
+    #[test]
+    pub fn test_response_body_without_parameter_on_response(){
+        let mut interpreter = Interpreter::new(None);
+
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo":"{{number}}"
+            }"#),
+            response_body(r#"{}"#)
+        );
+
+        assert_eq!(passed,false);
+
+        // Nested
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo":{
+                    "bar":"{{number}}"
+                }
+            }"#),
+            response_body(r#"{}"#)
+        );
+
+        assert_eq!(passed,false);
+    }
+
+    #[test]
+    pub fn test_response_body_without_parameter_on_test_case(){
+        let mut interpreter = Interpreter::new(None);
+
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{}"#),
+            response_body(r#"{
+                "foo": 123
+            }"#)
+        );
+
+        assert_eq!(passed,true);
+    }
+
+    #[test]
+    pub fn test_response_body_with_pattern(){
+        let mut interpreter = Interpreter::new(None);
+
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo": 123
+            }"#),
+            response_body(r#"{
+                "foo": 123
+            }"#)
+        );
+
+        assert_eq!(passed,true);
+
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo": 1233
+            }"#),
+            response_body(r#"{
+                "foo": 123
+            }"#)
+        );
+
+        assert_eq!(passed,false);
+
+        // String
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo": "Foo"
+            }"#),
+            response_body(r#"{
+                "foo": "Foo"
+            }"#)
+        );
+
+        assert_eq!(passed,true);
+
+
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo": "Foo"
+            }"#),
+            response_body(r#"{
+                "foo": "Bar"
+            }"#)
+        );
+
+        assert_eq!(passed,false);
+
+
+        // Different types
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo": "Foo"
+            }"#),
+            response_body(r#"{
+                "foo": 123
+            }"#)
+        );
+
+        assert_eq!(passed,false);
+    }
+
+    #[test]
+    pub fn test_response_body_with_nested_patterns(){
+        let mut interpreter = Interpreter::new(None);
+
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo": {
+                    "bar": "{{number}}"
+                }
+            }"#),
+            response_body(r#"{
+                "foo": {
+                    "bar": 123
+                }
+            }"#)
+        );
+
+        assert_eq!(passed,true);
+
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo": {
+                    "bar": "{{number}}"
+                }
+            }"#),
+            response_body(r#"{
+                "foo": {
+                    "bar": "3233"
+                }
+            }"#)
+        );
+
+        assert_eq!(passed,false);
+    }
+
+    #[test]
+    pub fn test_response_body_with_array(){
+        let mut interpreter = Interpreter::new(None);
+
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo": {
+                    "bar": [
+                        {
+                            "foo":"{{number}}"
+                        }
+                    ]
+                }
+            }"#),
+            response_body(r#"{
+                "foo": {
+                    "bar": [
+                        {
+                            "foo": 123
+                        }
+                    ]
+                }
+            }"#)
+        );
+
+        assert_eq!(passed,true);
+
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo": {
+                    "bar": [
+                        {
+                            "foo":"{{number}}"
+                        }
+                    ]
+                }
+            }"#),
+            response_body(r#"{
+                "foo": {
+                    "bar": [
+                        {
+                            "foo": "asasa"
+                        }
+                    ]
+                }
+            }"#)
+        );
+
+        assert_eq!(passed,false);
+
+        let passed = interpreter.parse_response_body(
+            response_body(r#"{
+                "foo": {
+                    "bar": [
+                        {
+                            "foo":"{{number}}"
+                        }
+                    ]
+                }
+            }"#),
+            response_body(r#"{
+                "foo": {
+                    "bar": [
+                        {
+                            "foo": 123
+                        },
+                        {
+                            "foo": "asass"
+                        }
+                    ]
+                }
+            }"#)
+        );
+
+        assert_eq!(passed,false);
     }
 }

@@ -68,6 +68,8 @@ async fn main() ->  Result<()> {
         println!("{} : {}","STARTED".cyan(),name);
 
         let test_case_str = read_to_string(path).unwrap();
+
+        // Stripping comments in the json file.
         let test_case_reader = StripComments::new(test_case_str.as_bytes());
         let test_case_json:Value = from_reader(test_case_reader).unwrap();
         let test_case = TestCase::new(name.clone(),test_case_json.as_object().unwrap().to_owned());
@@ -97,6 +99,7 @@ async fn main() ->  Result<()> {
             None=>{HeaderMap::new()}
         };
 
+        // Appending default headers
         let mut default_headers_iter = default_headers.iter();
 
         while let Some((k,v)) = default_headers_iter.next() {
@@ -110,6 +113,7 @@ async fn main() ->  Result<()> {
 
         let mut headers_iter = headers.iter();
 
+        // Formatting all headers
         while let Some((k,v)) = headers_iter.next(){
             let value = v.to_str().unwrap();
             let value = interpreter.request_header(value);

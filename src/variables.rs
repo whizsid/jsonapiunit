@@ -6,6 +6,7 @@ pub struct Variable {
     pub value: Value
 }
 
+/// All variables storing inside this
 pub struct Variables {
     pub variables: Vec<Variable>,
     pub js_used_variable_count: usize
@@ -25,7 +26,11 @@ impl Variables {
 
         match exist {
             Some(_)=>{
-                panic!("Re assignment for the {} variable.",name)
+                let index = self.variables.iter().position(|x| x.name == name).unwrap();
+
+                self.variables.remove(index);
+
+                self.add(name,value);
             }
             None=>{
                 self.variables.push(Variable {
@@ -48,5 +53,63 @@ impl Variables {
         }
 
         declare
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::Variables;
+    use serde_json::Value;
+    use serde_json::Number;
+
+    #[test]
+    pub fn test_variable_add(){
+        let mut variables = Variables::new();
+
+        variables.add("foo",Value::String(String::from("Foo")));
+
+        let variable = variables.get("foo");
+
+        assert_eq!(variable.is_none(),false);
+
+        match variable {
+            Some(var)=>{
+                assert_eq!(format!("{}",var.value),"\"Foo\"");
+            }
+            None=>{}
+        }
+    }
+
+    #[test]
+    pub fn test_existing_variable_add(){
+        let mut variables = Variables::new();
+
+        variables.add("foo",Value::String(String::from("Bar")));
+
+        variables.add("foo",Value::String(String::from("Foo")));
+
+
+        let variable = variables.get("foo");
+
+        assert_eq!(variable.is_none(),false);
+
+        match variable {
+            Some(var)=>{
+                assert_eq!(format!("{}",var.value),"\"Foo\"");
+            }
+            None=>{}
+        }
+    }
+
+    #[test]
+    pub fn test_get_js_definition(){
+        let mut variables = Variables::new();
+
+        variables.add("foo",Value::String(String::from("Foo")));
+
+        variables.add("bar",Value::Number(Number::from(12)));
+
+        assert_eq!(&variables.get_js_definitions(),"var foo = \"Foo\";\nvar bar = 12;\n");
     }
 }
