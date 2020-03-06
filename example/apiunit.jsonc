@@ -1,0 +1,19 @@
+{
+    "baseUrl":"http://[::1]:8000/api/",
+    "preVariables": {
+        "username": "murali"
+    },
+    "default": {
+        "method":"POST",
+        "headers": {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+    },
+    "files":"apiTest/*.jsonc"//,
+    // "proxy": {
+    //     "uri": "proxy uri",
+    //     "username": "username",
+    //     "password": "password"
+    // }
+}

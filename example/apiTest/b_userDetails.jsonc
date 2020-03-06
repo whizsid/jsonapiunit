@@ -1,0 +1,19 @@
+{
+    "url":"user/details",
+    "request": {
+        "headers":{
+            // Passing a priviously created variable
+            "Authorization": "Bearer {{token}}"
+        }
+    },
+    "response":{
+        "body": {
+            "name": "{{ string }}",
+            "status": true,
+            "limit": "{{ limit:number }}",
+            "usage": "{{usage: number && usage<=limit}}",
+            "username": "{{ string }}"
+        },
+        "status": 200
+    }
+}

@@ -1,0 +1,23 @@
+{
+    "url":"categories",
+    "method": "GET",
+    "request": {
+        "headers":{
+            // Passing a priviously created variable
+            "Authorization": "Bearer {{token}}"
+        }
+    },
+    "response":{
+        "body": {
+            "status": true,
+            "categories": [
+                {
+                    "id": "{{number}}",
+                    "name": "{{string}}",
+                    "minPrice": "{{number}}"
+                }
+            ]
+        },
+        "status": 200
+    }
+}

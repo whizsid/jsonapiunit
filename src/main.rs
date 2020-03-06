@@ -105,8 +105,9 @@ async fn main() -> Result<()> {
             Err(_) => Url::parse(&test_case.url()).unwrap(),
         };
 
-        let body =
-            Value::Object(interpreter.parse_request_body(test_case.request().body().unwrap()));
+        let body = Value::Object(
+            interpreter.parse_request_body(test_case.request().body().unwrap_or_default()),
+        );
 
         let method = match test_case.method() {
             Some(method) => method,
@@ -191,6 +192,22 @@ async fn main() -> Result<()> {
                     failed = true;
                     println!("{} : Response is not a JSON.", "FAILED TEST CASE".red());
                 }
+            }
+        } else {
+            if !status_matched {
+                failed = true;
+
+                println!(
+                    "{} : Name: {}, Reason: Status code not matched.",
+                    "FAILED TEST CASE".red(),
+                    test_case.name()
+                );
+            } else {
+                println!(
+                    "{} : Name: {}",
+                    "PASSED TEST CASE".green(),
+                    test_case.name()
+                );
             }
         }
     }

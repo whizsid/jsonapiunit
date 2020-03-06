@@ -1,0 +1,24 @@
+{
+    "url":"user/login",
+    "request":{
+        "body":{
+            "username":"{{username}}",
+            // Asking a user input during test
+            // You can access this value as a variable
+            "password":"{{ > password: string }}"
+        }
+    },
+    "response": {
+        // Body is Optional
+        "body":{
+            "token":"{{ token: string }}",
+            "name": "{{ string }}",
+            "status": true,
+            "limit": "{{ limit:number }}",
+            "usage": "{{usage: number && usage<=limit}}",
+            "username": "{{ string }}"
+        },
+        // Status code is also optional
+        "status": 200
+    }
+}

@@ -410,7 +410,23 @@ impl Interpreter {
                         }
                         _ => this.response_value(tv.to_owned(), val.to_owned()),
                     },
-                    None => false,
+                    None => {
+                        println!("{} : Assertion: {} , Fails:{}, Assertions:{}, TotFails:{}, TotAssertions:{}",
+                            "FAILED".red(),
+                            tv,
+                            this.cur_fails,
+                            this.cur_asserts,
+                            this.tot_fails,
+                            this.tot_asserts
+                        );
+
+                        this.cur_fails += 1;
+                        this.cur_asserts += 1;
+                        this.tot_asserts += 1;
+                        this.tot_fails += 1;
+                        
+                        false
+                    },
                 };
 
                 if !checked {
