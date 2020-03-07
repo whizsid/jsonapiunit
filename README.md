@@ -1,6 +1,28 @@
 # JSON API Tester
 
-A framework for unit testing your JSON REST APIs.
+A framework for unit testing your JSON REST APIs. You can write test cases in a typescript like language.
+
+## Contents
+
+- [Configuration](#configuration)
+    - [Defining Default Request Behaviours](#default-request-behaviours)
+    - [Base URL](#base-url)
+    - [Under Proxy](#under-proxy)
+    - [Select Test Cases](#select-test-cases)
+- [Example](#example)
+    - [Example Request](#example-request)
+    - [Example Output](#example-output)
+    - [Example Project](#example-project)
+- [Request](#request)
+    - [Using Variables](#using-variables)
+    - [User Inputs](#user-inputs)
+- [Validating Response](#response)
+    - [Type Checking](#type-checking)
+    - [Variable Declaration](#variable-declaration)
+    - [Compare With Previously Created Variables](#compare-with-previously-created-variables)
+    - [Array Validation](#array-validation)
+    - [Nested Objects Validation](#nested-object-validation)
+    - [Advanced Validations](#advanced-validations)
 
 ## Example
 
