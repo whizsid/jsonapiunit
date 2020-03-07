@@ -1,3 +1,4 @@
+extern crate clap;
 extern crate glob;
 extern crate http;
 extern crate serde_json;
@@ -8,6 +9,7 @@ mod interpreter;
 mod test_case;
 mod variables;
 
+use clap::{App, Arg};
 use colored::*;
 use config::Config;
 use glob::glob;
@@ -42,7 +44,24 @@ impl Client {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let config = Config::from_file();
+    let matches = App::new("JSONAPIUnit")
+        .version("0.1.3")
+        .author("WhizSid <whizsid@aol.com>")
+        .about("TypeScript like unit testing framework to test REST JSON APIs.")
+        .arg(
+            Arg::with_name("config")
+                .short("c")
+                .long("config")
+                .value_name("FILE")
+                .help("Sets a custom config file")
+                .takes_value(true),
+        )
+        .get_matches();
+
+    let config = match matches.value_of("config") {
+        Some(file) => Config::from_file(file),
+        None => Config::from_file("jsonapiunit.jsonc"),
+    };
 
     let mut interpreter = Interpreter::new(config.pre_variables);
 

@@ -49,8 +49,8 @@ impl Config {
     ///
     /// This function will read the `jsonapiunit.jsonc` file and
     /// creating the new config struct
-    pub fn from_file() -> Config {
-        let file = read_to_string("jsonapiunit.jsonc");
+    pub fn from_file(file: &str) -> Config {
+        let file = read_to_string(file);
 
         match file {
             Ok(file_str) => {
