@@ -1,9 +1,16 @@
 # JSONAPIUnit
 
+---
+![AUR version](https://img.shields.io/aur/version/jsonapiunit)
+![GitHub](https://img.shields.io/github/license/whizsid/jsonapiunit)
+![Travis CI](https://travis-ci.org/whizsid/jsonapiunit.svg?branch=master)
+---
+
 A framework for unit testing your JSON REST APIs. Write test cases in typescript like language.
 
 ## Contents
 
+- [Installation](#installation)
 - [Usage](#usage)
 - [Configuration](#configuration)
     - [Defining Default Request Behaviours](#defining-default-request-behaviours)
@@ -27,6 +34,32 @@ A framework for unit testing your JSON REST APIs. Write test cases in typescript
     - [Advanced Validations](#advanced-validations)
 - [Todo](#todo)
 - [Contributing](#contributing)
+
+## Installation
+
+### Ubuntu
+
+Download the ubuntu build from [here](https://github.com/whizsid/jsonapiunit/releases/download/0.1.3/jsonapiunit_0.1.3_amd64.deb) and install it using below command.
+
+```
+$ sudo dpkg -i ./jsonapiunit_0.1.3_amd64.deb
+
+```
+
+### Arch Linux
+
+Clone the AUR and install.
+
+```
+git clone https://aur.archlinux.org/jsonapiunit.git
+cd jsonapiunit
+makepkg -si
+
+```
+
+### Other Distros
+
+Download pre-built binary from [here](https://github.com/whizsid/jsonapiunit/releases/download/0.1.3/jsonapiunit) and run it.
 
 ## Usage
 
