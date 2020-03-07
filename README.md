@@ -1,55 +1,158 @@
-# JSON API Tester
+# JSONAPIUnit
 
-A framework for unit testing your JSON REST APIs. You can write test cases in a typescript like language.
+A framework for unit testing your JSON REST APIs. Write test cases in typescript like language.
 
 ## Contents
 
+- [Usage](#usage)
 - [Configuration](#configuration)
-    - [Defining Default Request Behaviours](#default-request-behaviours)
+    - [Defining Default Request Behaviours](#defining-default-request-behaviours)
     - [Base URL](#base-url)
     - [Under Proxy](#under-proxy)
     - [Select Test Cases](#select-test-cases)
+    - [Pre Variables](#pre-variables)
 - [Example](#example)
-    - [Example Request](#example-request)
+    - [Example Test Case](#example-test-case)
     - [Example Output](#example-output)
     - [Example Project](#example-project)
 - [Request](#request)
-    - [Using Variables](#using-variables)
     - [User Inputs](#user-inputs)
-- [Validating Response](#response)
+    - [Using Variables](#using-variables)
+- [Validating Response](#validating-response)
     - [Type Checking](#type-checking)
     - [Variable Declaration](#variable-declaration)
-    - [Compare With Previously Created Variables](#compare-with-previously-created-variables)
+    - [Compare With Previously Created Variables](#comparisons)
     - [Array Validation](#array-validation)
     - [Nested Objects Validation](#nested-object-validation)
     - [Advanced Validations](#advanced-validations)
+- [Todo](#todo)
+- [Contributing](#contributing)
 
-## Example
+## Usage
 
-You can run our working example by executing following commands.
+Download binaries or build the JSONAPIUnit on your PC and run `jsonapiunit` on your terminal.
 
-```bash
-$ cargo build --all
-$ cd example
-$ cargo run
-// Open an another terminal in current directory and run bellow command parallely.
-$ ../target/debug/json-api-tester
+## Configuration
+
+JSONAPIUnit looks for a `jsonapiunit.jsonc` configuration file in the project root folder.
+
+### Defining Default Request Behaviours
+
+Users can define default request headers or method by placing a property named `default` in their config file. This property is optional.
+
+```jsonc
+// jsonapiunit.jsonc
+{
+    // ...
+    "default":{
+        // Optional
+        "method":"GET",
+        // Optional
+        "headers": {
+            "Accept": "application/json"
+        }
+    }
+}
+
 
 ```
 
-You can see an example test case below. 
+### Base URL
+
+`baseUrl` property allow users to define their base URL. After that users can define a relative URL in their test cases. This property is optional. JSONAPIUnit using [RFC3986](https://tools.ietf.org/html/rfc3986#section-5.2) standard to combine the URLs. 
+
+```jsonc
+// jsonapiunit.jsonc
+{
+    // ...
+    "baseUrl":"http://127.0.0.1:8000/api/"
+}
+
+```
+
+
+```jsonc
+// In the test case
+{
+    // ...
+    "url":"user/login"
+}
+
+```
+
+### Under Proxy
+
+A proxy to use for outgoing https requests. Users can define their proxy settings by adding a new property named `proxy` to their config file.
+
+```jsonc
+// jsonapiunit.jsonc
+{
+    "proxy":{
+        // This property is required
+        "uri": "proxy uri",
+        // These properties are optional
+        "username": "username to the proxy server",
+        "password": "proxy server password"
+    }
+}
+
+```
+
+### Select test cases
+
+Users can provide their own file path pattern for tracking test cases. By default JSONAPIUnit will tracking the `apiTest/*.jsonc` files.
+
+```jsonc
+// jsonapiunit.jsonc
+{
+    // ...
+    "files": "tests/*.json"
+}
+
+```
+
+### Pre Variables
+
+Users can provide variables to use in test cases. These variables creating on initialization.
+
+```jsonc
+// jsonapiunit.jsonc
+{
+    // ...
+    "preVariables":{
+        "username":"murali"
+    }
+}
+
+```
+
+## Example
+
+### Example Test Case
+
+This is a example test case for JSONAPIUnit. 
 
 ```jsonc
 {
     "url":"http://127.0.0.1:8000/api/user/login",
+    // This property is optional if you 
+    // provided a default request method 
+    // in config file
     "method":"POST",
     "request":{
         "body":{
             "username":"dev",
-            // Asking a user input during test
-            // You can access this value as a variable
-            "password":"{{ > password }}"
+            // Prompt user to insert a password
+            // to send with the request
+            // and storing it in a new variable
+            // named `password`.
+            // You can access this variable in
+            // other test cases
+            "password":"{{ > password: string }}"
         },
+        // This property is optional if you 
+        // provided a default request method 
+        // in config file
         "headers":{
             "Accept": "application/json",
             "Content-Type": "application/json"
@@ -71,124 +174,244 @@ You can see an example test case below.
 
 ```
 
-This is the output of our example project.
+### Example Output
+
+
+This is a sample output of JSONAPIUnit.
 
 ```
-STARTED : example/apiTest/a_loginTest.jsonc
-INPUT : password?
-hbh
-PASSED : Assertion: "{{limit:number}}" , Fails:0, Assertions:1, TotFails:0, TotAssertions:1
-PASSED : Assertion: "{{string}}" , Fails:0, Assertions:2, TotFails:0, TotAssertions:2
-PASSED : Assertion: true , Fails:0, Assertions:3, TotFails:0, TotAssertions:3
-PASSED : Assertion: "{{token:string}}" , Fails:0, Assertions:4, TotFails:0, TotAssertions:4
-PASSED : Assertion: "{{usage:number&&usage<=limit}}" , Fails:0, Assertions:5, TotFails:0, TotAssertio
-ns:5
-PASSED : Assertion: "{{string}}" , Fails:0, Assertions:6, TotFails:0, TotAssertions:6
-PASSED TEST CASE : Name: example/apiTest/a_loginTest.jsonc
-STARTED : example/apiTest/b_userDetails.jsonc
-PASSED : Assertion: "{{string}}" , Fails:0, Assertions:1, TotFails:0, TotAssertions:7
-PASSED : Assertion: true , Fails:0, Assertions:2, TotFails:0, TotAssertions:8
-PASSED : Assertion: "{{string}}" , Fails:0, Assertions:3, TotFails:0, TotAssertions:9
-FAILED TEST CASE : Name: example/apiTest/b_userDetails.jsonc, Reason: Some assertion(s) failed.
-STARTED : example/apiTest/c_categories.jsonc
-STARTED : example/apiTest/a_loginTest.jsonc
-INPUT : password?
-jnj
-PASSED : Assertion: "{{limit:number}}" , Fails:0, Assertions:1, TotFails:0, TotAssertions:1
-PASSED : Assertion: "{{string}}" , Fails:0, Assertions:2, TotFails:0, TotAssertions:2
-PASSED : Assertion: true , Fails:0, Assertions:3, TotFails:0, TotAssertions:3
-PASSED : Assertion: "{{token:string}}" , Fails:0, Assertions:4, TotFails:0, TotAssertions:4
-PASSED : Assertion: "{{usage:number&&usage<=limit}}" , Fails:0, Assertions:5, TotFails:0, TotAssertio
-ns:5
-PASSED : Assertion: "{{string}}" , Fails:0, Assertions:6, TotFails:0, TotAssertions:6
-PASSED TEST CASE : Name: example/apiTest/a_loginTest.jsonc
-STARTED : example/apiTest/b_userDetails.jsonc
-FAILED : Assertion: "{{ limit:number }}" , Fails:0, Assertions:0, TotFails:0, TotAssertions:6
-PASSED : Assertion: "{{string}}" , Fails:1, Assertions:2, TotFails:1, TotAssertions:8
-PASSED : Assertion: true , Fails:1, Assertions:3, TotFails:1, TotAssertions:9
-FAILED : Assertion: "{{usage: number && usage<=limit}}" , Fails:1, Assertions:3, TotFails:1, TotAssertions:9
-PASSED : Assertion: "{{string}}" , Fails:2, Assertions:5, TotFails:2, TotAssertions:11
-FAILED TEST CASE : Name: example/apiTest/b_userDetails.jsonc, Reason: Some assertion(s) failed.
-STARTED : example/apiTest/c_categories.jsonc
-PASSED : Assertion: "{{number}}" , Fails:0, Assertions:1, TotFails:2, TotAssertions:12
-PASSED : Assertion: "{{number}}" , Fails:0, Assertions:2, TotFails:2, TotAssertions:13
-PASSED : Assertion: "{{string}}" , Fails:0, Assertions:3, TotFails:2, TotAssertions:14
-PASSED : Assertion: "{{number}}" , Fails:0, Assertions:4, TotFails:2, TotAssertions:15
-PASSED : Assertion: "{{number}}" , Fails:0, Assertions:5, TotFails:2, TotAssertions:16
-PASSED : Assertion: "{{string}}" , Fails:0, Assertions:6, TotFails:2, TotAssertions:17
-PASSED : Assertion: "{{number}}" , Fails:0, Assertions:7, TotFails:2, TotAssertions:18
-PASSED : Assertion: "{{number}}" , Fails:0, Assertions:8, TotFails:2, TotAssertions:19
-PASSED : Assertion: "{{string}}" , Fails:0, Assertions:9, TotFails:2, TotAssertions:20
-PASSED : Assertion: true , Fails:0, Assertions:10, TotFails:2, TotAssertions:21
-PASSED TEST CASE : Name: example/apiTest/c_categories.jsonc
-Error: "Some test cases failed."
+STARTED : apiTest/b_userDetails.jsonc
+PASSED : Assertion: HTTP_STATUS_200, Value: HTTP_STATUS_200
+FAILED : Assertion: "{{ limit:number }}", Value: Not Supplied
+PASSED : Assertion: "{{string}}", Value: "Muththaiya Muralitharan"
+PASSED : Assertion: true, Value: true
+FAILED : Assertion: "{{usage: number && usage<=limit}}", Value: Not Supplied
+PASSED : Assertion: "{{string}}", Value: "murali"
+FAILED TEST CASE : Name: apiTest/b_userDetails.jsonc, Reason: "Some assertion(s) failed.", Assertions: 5, Fails: 2, TotAssertions: 13, TotFails: 2
 
 ```
 
-## Type Checking
+### Example Project
 
-You can check the exact type of your data. Available types are `string`,`number`,`null`,`any`,`array`,`object`.
+Users can run working example by executing following commands.
+
+```bash
+$ cargo build --all
+$ cd example
+$ cargo run
+// Open an another terminal in current directory and run bellow command parallely.
+$ ../target/debug/json-api-tester
+
+```
+
+## Request
+
+JSONAPIUnit enable users to create dynamic requests based on previously requests.
+
+Normal request:-
+
+```jsonc
+{
+    // ...
+    "request":{
+        "body":{
+            "username":"my-user"
+        },
+        "headers":{
+            "Accept":"application/json"
+        }
+    }
+}
+
+```
+
+### User Inputs
+
+Users can insert their inputs before sending the request.
+
+```jsonc
+// Test Case
+{
+    // ...
+    "request":{
+        // ...
+        "body":{
+            "password":"{{> password: string}}"
+        }
+    }
+}
+
+```
+
+### Using Variables
+
+Sending previously created variables in request body or request headers.
+
+```jsonc
+// Test Case
+{
+    "request":{
+        "body":{
+            // catId is a previously created variable
+            "id":"{{catId}}"
+        },
+        "headers":{
+            // token is also a previously created variable
+            "Authorization": "Bearer {{token}}"
+        }
+    }
+}
+
+```
+
+## Validating Responce
+
+### Type Checking
+
+Check the exact type of response data. Available types are `string`,`number`,`null`,`any`,`array` and `object`.
 
 Example:-
 
 ```jsonc
-{
-    "body":{
+// Test Case
 
-        "name" : "{{string}}",
-        "limit" : "{{number}}",
-        "nick_name" : "{{string|null}}"
+{
+    // ...
+    "response":{
+        // ...
+        "body":{
+            "name" : "{{string}}",
+            "limit" : "{{number}}",
+            "nick_name" : "{{string|null}}"
+        }
     }
 }
 
 ```
 
-## Variable Creation
+JSONAPIUnit currently not supporting to use multiple conflicting types. Ex:- `number|string`, `object|array`
 
-Create variables with the data coming from the REST API.
+### Variable Declaration
+
+Assign JSON value to a new variable. 
 
 ```jsonc
+// Test Case
 {
-    "body":{
-        "name": "{{name:string}}",
-        "limit": "{{ limit: number }}",
-        "nick_name": "{{ nickName: string|null }}"
+    // ...
+    "response":{
+        // ...
+        "body":{
+            "name": "{{name:string}}",
+            "limit": "{{ limit: number }}",
+            "nick_name": "{{ nickName: string|null }}"
+        }
     }
 }
 
 ```
 
-You can use these variables to validate next test cases.
+You can use these variables to validate other assertions on same test case or another test cases.
 
-## Comparisons
+### Comparisons
 
-Compare data with previously created variables or other values.
+Compare data with previously created variables or other hard coded values.
 
 ```jsonc
+// Test Case
 {
-    "body":{
-        // mileageLimit is a previously created variable
-        "mileage":"{{mileage:number && mileage <= mileageLimit}}",
-        "billCount": "{{billCount:number && billCount > 0}}",
-        "name": "{{name: string && name == 'Abrahm'}}"
+    // ...
+    "response":{
+        // ...
+        "body":{
+            // mileageLimit is a previously created variable
+            "mileage":"{{mileage:number && mileage <= mileageLimit}}",
+            "billCount": "{{billCount:number && billCount > 0}}",
+            "name": "{{name: string && name == 'Abrahm'}}"
+        }
     }
 }
 
 ```
 
-## User Inputs
+### Array Validations
 
-Requesting user inputs before sending the data to the API
+Validating all elements of an array.
 
 ```jsonc 
 
+// Test Case
 {
-    "params":{
-        "username" : "dev",
-        "password" : "{{ > password:string}}"
+    // ...
+    "response":{
+        // ...
+        "body":{
+            "categories":[
+                // JSONAPIUnit will matching all elements
+                // of this array with bellow type.
+                {
+                    "id":"{{number}}",
+                    "name":"{{string}}"
+                }
+            ]
+        }
+    }
+}
+
+
+```
+
+### Nested Object Validation
+
+Validating the nested elements of response.
+
+```jsonc
+
+// Test Case
+
+{
+    // ...
+    "response":{
+        // ...
+        "body":{
+            // ...
+            "product":{
+                // ...
+                "category":{
+                    // ...
+                    "name":"{{string}}"
+                }
+            }
+        }
+    }
+}
+```
+
+### Advanced Validations
+
+Users can use JS functions in comparisons to validate.
+
+```jsonc
+// Test Case
+{
+    // ...
+    "response":{
+        // ...
+        "body":{
+            "categories":"{{categories:array && categories.length >100}}"
+        }
     }
 }
 
 ```
 
-A new variable creating with the user input after user entered the value. You can use this variable for test cases.
+## Todo
+
+- Response Header Validation.
+- Passing config variables from command line.
+
+## Contributing
+
+All PRs and issues are welcome. And also stars are welcome.
+
+Please format and test your codes before sending PRs.

@@ -1,25 +1,28 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate rocket_contrib;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate rocket;
+#[macro_use]
+extern crate rocket_contrib;
+#[macro_use]
+extern crate serde_derive;
 
-use rocket_contrib::json::{JsonValue,Json};
-use rocket::Outcome;
 use rocket::http::Status;
-use rocket::request::{self, Request, FromRequest};
+use rocket::request::{self, FromRequest, Request};
+use rocket::Outcome;
+use rocket_contrib::json::{Json, JsonValue};
 
 const AUTH_KEY: &'static str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
 
 #[derive(Serialize, Deserialize)]
 pub struct LoginRequestBody {
     pub username: String,
-    pub password: String
+    pub password: String,
 }
 
-#[post("/user/login", data="<body>")]
-fn login(body: Json<LoginRequestBody>) ->  JsonValue {
-    if body.username !="murali" {
+#[post("/user/login", data = "<body>")]
+fn login(body: Json<LoginRequestBody>) -> JsonValue {
+    if body.username != "murali" {
         return json!({
             "status": false,
             "message": "Invalid username"
@@ -40,7 +43,7 @@ struct ApiKey(String);
 
 /// Returns true if `key` is a valid API key string.
 fn is_valid(key: &str) -> bool {
-    key == format!("Bearer {}",AUTH_KEY)
+    key == format!("Bearer {}", AUTH_KEY)
 }
 
 #[derive(Debug)]
@@ -65,7 +68,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for ApiKey {
 }
 
 #[post("/user/details")]
-fn user_details(_api_key:ApiKey)->JsonValue {
+fn user_details(_api_key: ApiKey) -> JsonValue {
     json!({
         "status": true,
         "name":"Muththaiya Muralitharan",
@@ -76,7 +79,7 @@ fn user_details(_api_key:ApiKey)->JsonValue {
 }
 
 #[get("/categories")]
-fn categories(_api_key:ApiKey)->JsonValue {
+fn categories(_api_key: ApiKey) -> JsonValue {
     json!({
         "status": true,
         "categories": [
@@ -100,5 +103,7 @@ fn categories(_api_key:ApiKey)->JsonValue {
 }
 
 fn main() {
-    rocket::ignite().mount("/api", routes![login,user_details,categories]).launch();
+    rocket::ignite()
+        .mount("/api", routes![login, user_details, categories])
+        .launch();
 }

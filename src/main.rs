@@ -146,8 +146,22 @@ async fn main() -> Result<()> {
 
         let response = client.request(request).await?;
 
-        let status_matched = match test_case.response().status() {
-            Some(status) => status == (response.status().as_u16() as i64),
+        // Clearing interpreter assertion count
+        interpreter.reset_counter();
+
+        let mut passed = match test_case.response().status() {
+            Some(test_status) => {
+                let res_status = response.status().as_u16() as i64;
+                let status_matched = test_status == res_status;
+
+                interpreter.log_assertion(
+                    status_matched,
+                    &format!("HTTP_STATUS_{}", test_status),
+                    &format!("HTTP_STATUS_{}", res_status),
+                );
+
+                status_matched
+            }
             None => true,
         };
 
@@ -159,56 +173,39 @@ async fn main() -> Result<()> {
 
             match response_json {
                 Ok(response_value) => {
-                    let passed = interpreter.parse_response_body(
+                    interpreter.log_assertion(true, "FORMAT_JSON", "FORMAT_JSON");
+                    let res_body_passed = interpreter.parse_response_body(
                         test_response,
                         response_value.as_object().unwrap().to_owned(),
                     );
 
-                    if !status_matched {
-                        failed = true;
-
-                        println!(
-                            "{} : Name: {}, Reason: Status code not matched.",
-                            "FAILED TEST CASE".red(),
-                            test_case.name()
-                        );
-                    } else if !passed {
-                        failed = true;
-
-                        println!(
-                            "{} : Name: {}, Reason: Some assertion(s) failed.",
-                            "FAILED TEST CASE".red(),
-                            test_case.name()
-                        );
-                    } else {
-                        println!(
-                            "{} : Name: {}",
-                            "PASSED TEST CASE".green(),
-                            test_case.name()
-                        );
+                    if !res_body_passed {
+                        passed = false;
                     }
                 }
                 Err(_) => {
-                    failed = true;
-                    println!("{} : Response is not a JSON.", "FAILED TEST CASE".red());
+                    interpreter.log_assertion(false, "FORMAT_JSON", "FORMAT_NOT_JSON");
+                    passed = false;
                 }
             }
-        } else {
-            if !status_matched {
-                failed = true;
+        }
 
-                println!(
-                    "{} : Name: {}, Reason: Status code not matched.",
-                    "FAILED TEST CASE".red(),
-                    test_case.name()
-                );
+        println!(
+            "{} : Name: {}, Assertions: {}, Fails: {}, TotAssertions: {}, TotFails: {}",
+            if passed {
+                "PASSED TEST CASE".green()
             } else {
-                println!(
-                    "{} : Name: {}",
-                    "PASSED TEST CASE".green(),
-                    test_case.name()
-                );
-            }
+                "FAILED TEST CASE".red()
+            },
+            test_case.name(),
+            interpreter.cur_asserts,
+            interpreter.cur_fails,
+            interpreter.tot_asserts,
+            interpreter.tot_fails
+        );
+
+        if !passed {
+            failed = true;
         }
     }
 

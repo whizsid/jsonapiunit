@@ -9,10 +9,10 @@ use std::io::stdin;
 /// All codes are executing inside this
 pub struct Interpreter {
     variables: Variables,
-    tot_fails: i32,
-    cur_fails: i32,
-    tot_asserts: i32,
-    cur_asserts: i32,
+    pub tot_fails: i32,
+    pub cur_fails: i32,
+    pub tot_asserts: i32,
+    pub cur_asserts: i32,
 }
 
 impl Interpreter {
@@ -289,27 +289,7 @@ impl Interpreter {
             };
         }
 
-        self.cur_asserts += 1;
-        self.tot_asserts += 1;
-
-        if !passed {
-            self.cur_fails += 1;
-            self.tot_fails += 1;
-        }
-
-        println!(
-            "{} : Assertion: {} , Fails:{}, Assertions:{}, TotFails:{}, TotAssertions:{}",
-            if passed {
-                "PASSED".green()
-            } else {
-                "FAILED".red()
-            },
-            format,
-            self.cur_fails,
-            self.cur_asserts,
-            self.tot_fails,
-            self.tot_asserts
-        );
+        self.log_assertion(passed, &format, &response_value);
 
         passed
     }
@@ -348,9 +328,6 @@ impl Interpreter {
         test_body: Map<String, Value>,
         res_body: Map<String, Value>,
     ) -> bool {
-        self.cur_asserts = 0;
-        self.cur_fails = 0;
-
         fn parse_body(
             this: &mut Interpreter,
             test_body: Map<String, Value>,
@@ -411,22 +388,10 @@ impl Interpreter {
                         _ => this.response_value(tv.to_owned(), val.to_owned()),
                     },
                     None => {
-                        println!("{} : Assertion: {} , Fails:{}, Assertions:{}, TotFails:{}, TotAssertions:{}",
-                            "FAILED".red(),
-                            tv,
-                            this.cur_fails,
-                            this.cur_asserts,
-                            this.tot_fails,
-                            this.tot_asserts
-                        );
+                        this.log_assertion(false, &format!("{}", tv), "Not Supplied");
 
-                        this.cur_fails += 1;
-                        this.cur_asserts += 1;
-                        this.tot_asserts += 1;
-                        this.tot_fails += 1;
-                        
                         false
-                    },
+                    }
                 };
 
                 if !checked {
@@ -438,6 +403,34 @@ impl Interpreter {
         }
 
         parse_body(self, test_body, res_body)
+    }
+
+    /// Printing the status of the assertion and increment the assertion count
+    pub fn log_assertion(&mut self, passed: bool, assertion: &str, value: &str) {
+        self.cur_asserts += 1;
+        self.tot_asserts += 1;
+
+        if !passed {
+            self.cur_fails += 1;
+            self.tot_fails += 1;
+        }
+
+        println!(
+            "{} : Assertion: {}, Value: {}",
+            if passed {
+                "PASSED".green()
+            } else {
+                "FAILED".red()
+            },
+            assertion,
+            value
+        );
+    }
+
+    /// Resetting the assertion counter of the current test case
+    pub fn reset_counter(&mut self) {
+        self.cur_fails = 0;
+        self.cur_asserts = 0;
     }
 
     #[cfg(test)]

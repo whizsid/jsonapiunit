@@ -47,10 +47,10 @@ impl Config {
 
     /// # Loading configurations from file
     ///
-    /// This function will read the `apiunit.jsonc` file and
+    /// This function will read the `jsonapiunit.jsonc` file and
     /// creating the new config struct
     pub fn from_file() -> Config {
-        let file = read_to_string("apiunit.jsonc");
+        let file = read_to_string("jsonapiunit.jsonc");
 
         match file {
             Ok(file_str) => {
