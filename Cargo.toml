@@ -26,3 +26,13 @@ colored = "1.9.3"
 members = [
     "example"
 ]
+
+[package.metadata.deb]
+maintainer = "WhizSid <whizsid@aol.com>"
+copyright = "2020, WhizSid <whizsid@aol.com>"
+license-file = "LICENSE"
+extended-description = """\
+TypeScript like unit testing framework for testing REST JSON APIs."""
+depends = "$auto"
+section = "utility"
+priority = "optional"
