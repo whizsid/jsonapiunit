@@ -31,7 +31,7 @@ members = [
 [package.metadata.deb]
 maintainer = "WhizSid <whizsid@aol.com>"
 copyright = "2020, WhizSid <whizsid@aol.com>"
-license-file = "LICENSE"
+license-file = ["LICENSE","4"]
 extended-description = """\
 TypeScript like unit testing framework for testing REST JSON APIs."""
 depends = "$auto"
